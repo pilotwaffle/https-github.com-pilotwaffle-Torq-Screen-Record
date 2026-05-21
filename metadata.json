@@ -1,0 +1,6 @@
+{
+  "name": "Kite Screen Recorder",
+  "description": "A browser-based screen recorder and demo video stylizer.",
+  "requestFramePermissions": ["microphone", "camera", "display-capture"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
