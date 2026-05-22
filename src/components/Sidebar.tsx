@@ -12,9 +12,11 @@ interface SidebarProps {
   onClear: () => void;
   errorMsg?: string | null;
   onOpenVideoGen: () => void;
+  onOpenSpeechGen: () => void;
+  onOpenMusicGen: () => void;
 }
 
-export function Sidebar({ state, setState, onRecord, onStopRecord, recordingStatus, onClear, errorMsg, onOpenVideoGen }: SidebarProps) {
+export function Sidebar({ state, setState, onRecord, onStopRecord, recordingStatus, onClear, errorMsg, onOpenVideoGen, onOpenSpeechGen, onOpenMusicGen }: SidebarProps) {
   const mockupOptions: { value: MockupType; label: string; icon: React.ReactNode }[] = [
     { value: 'none', label: 'None', icon: <Square className="w-4 h-4" /> },
     { value: 'macos', label: 'macOS', icon: <Box className="w-4 h-4" /> },
@@ -35,7 +37,7 @@ export function Sidebar({ state, setState, onRecord, onStopRecord, recordingStat
   ];
 
   return (
-    <div className="w-80 border-r border-gray-200 bg-white h-full flex flex-col overflow-y-auto">
+    <div className="w-full bg-white h-full flex flex-col">
       <div className="p-4 border-b border-gray-100 flex items-center space-x-2">
         <Film className="w-5 h-5 text-indigo-600" />
         <h1 className="font-semibold text-gray-800">DemoKite Studio</h1>
@@ -209,7 +211,7 @@ export function Sidebar({ state, setState, onRecord, onStopRecord, recordingStat
                </div>
              </button>
              
-             <button className="w-full flex items-center justify-between p-3 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 hover:border-indigo-300 hover:shadow-sm transition-all group">
+             <button onClick={onOpenSpeechGen} className="w-full flex items-center justify-between p-3 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 hover:border-indigo-300 hover:shadow-sm transition-all group">
                <div className="flex items-center space-x-3">
                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-50 to-indigo-100 flex items-center justify-center text-indigo-600 group-hover:from-indigo-100 group-hover:to-indigo-200 transition-all">
                    <Mic className="w-4 h-4" />
@@ -218,7 +220,7 @@ export function Sidebar({ state, setState, onRecord, onStopRecord, recordingStat
                </div>
              </button>
 
-             <button className="w-full flex items-center justify-between p-3 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 hover:border-pink-300 hover:shadow-sm transition-all group">
+             <button onClick={onOpenMusicGen} className="w-full flex items-center justify-between p-3 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 hover:border-pink-300 hover:shadow-sm transition-all group">
                <div className="flex items-center space-x-3">
                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-pink-50 to-pink-100 flex items-center justify-center text-pink-600 group-hover:from-pink-100 group-hover:to-pink-200 transition-all">
                    <Music className="w-4 h-4" />

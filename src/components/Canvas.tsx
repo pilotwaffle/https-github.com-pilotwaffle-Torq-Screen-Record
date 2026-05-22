@@ -48,7 +48,7 @@ export function Canvas({ state, videoStream, recordedUrl }: CanvasProps) {
   }, [videoStream, recordedUrl, state.lensBlur]);
 
   return (
-    <div className="flex-1 bg-neutral-100 overflow-hidden relative flex items-center justify-center p-8">
+    <div className="flex-1 bg-neutral-100 overflow-hidden relative flex items-center justify-center p-4 md:p-8">
       {/* Aspect Ratio Container for Output (16:9 like) */}
       <div 
          id="render-canvas"

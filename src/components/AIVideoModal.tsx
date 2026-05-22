@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { X, Video, Loader2 } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { X, Video, Loader2, Image as ImageIcon, Upload } from 'lucide-react';
 import { cn } from '../utils';
 
 interface AIVideoModalProps {
@@ -13,6 +13,9 @@ export function AIVideoModal({ isOpen, onClose, onVideoGenerated }: AIVideoModal
   const [isGenerating, setIsGenerating] = useState(false);
   const [statusText, setStatusText] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!isOpen) {
@@ -20,22 +23,49 @@ export function AIVideoModal({ isOpen, onClose, onVideoGenerated }: AIVideoModal
       setIsGenerating(false);
       setStatusText('');
       setError(null);
+      setImageFile(null);
+      setImagePreview(null);
     }
   }, [isOpen]);
 
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      const url = URL.createObjectURL(file);
+      setImagePreview(url);
+    }
+  };
+
   const handleGenerate = async () => {
-    if (!prompt.trim()) return;
+    if (!prompt.trim() && !imageFile) return;
     
     setIsGenerating(true);
     setError(null);
     setStatusText('Starting generation...');
     
     try {
+      let imageBytes: string | undefined;
+      let imageMimeType: string | undefined;
+      
+      if (imageFile) {
+        const reader = new FileReader();
+        imageBytes = await new Promise((resolve, reject) => {
+          reader.onload = () => {
+            const base64String = (reader.result as string).split(',')[1];
+            resolve(base64String);
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(imageFile);
+        });
+        imageMimeType = imageFile.type;
+      }
+
       // 1. Start generation
       const startRes = await fetch('/api/generate-video', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({ prompt, imageBytes, imageMimeType }),
       });
       
       const startData = await startRes.json();
@@ -105,17 +135,58 @@ export function AIVideoModal({ isOpen, onClose, onVideoGenerated }: AIVideoModal
         </div>
 
         <div className="p-6 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              What do you want to generate?
-            </label>
-            <textarea
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              placeholder="A neon hologram of a cat driving at top speed..."
-              className="w-full h-32 p-3 text-sm border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:ring-0 outline-none resize-none transition-colors"
-              disabled={isGenerating}
-            />
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Starting Image (Optional)
+              </label>
+              <div 
+                onClick={() => !isGenerating && fileInputRef.current?.click()}
+                className={cn(
+                  "w-full h-32 border-2 border-dashed rounded-xl flex flex-col items-center justify-center cursor-pointer transition-colors overflow-hidden group",
+                  imagePreview ? "border-purple-200" : "border-gray-200 hover:border-purple-300 hover:bg-purple-50",
+                  isGenerating && "opacity-50 cursor-not-allowed"
+                )}
+              >
+                {imagePreview ? (
+                  <div className="relative w-full h-full flex items-center justify-center bg-gray-50">
+                    <img src={imagePreview} className="h-full object-contain" alt="Preview" />
+                    {!isGenerating && (
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <span className="text-white text-sm font-medium flex items-center space-x-2">
+                           <Upload className="w-4 h-4" /> <span>Change Image</span>
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center text-gray-400 space-y-2 group-hover:text-purple-500 transition-colors">
+                    <ImageIcon className="w-6 h-6" />
+                    <span className="text-sm font-medium">Click to upload image</span>
+                  </div>
+                )}
+              </div>
+              <input 
+                type="file" 
+                ref={fileInputRef} 
+                onChange={handleImageUpload} 
+                accept="image/*" 
+                className="hidden" 
+              />
+            </div>
+          
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Video Prompt
+              </label>
+              <textarea
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                placeholder="A neon hologram of a cat driving at top speed..."
+                className="w-full h-32 p-3 text-sm border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:ring-0 outline-none resize-none transition-colors"
+                disabled={isGenerating}
+              />
+            </div>
           </div>
 
           {error && (
@@ -142,7 +213,7 @@ export function AIVideoModal({ isOpen, onClose, onVideoGenerated }: AIVideoModal
           </button>
           <button
             onClick={handleGenerate}
-            disabled={!prompt.trim() || isGenerating}
+            disabled={!(prompt.trim() || imageFile) || isGenerating}
             className="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
           >
             {isGenerating ? (

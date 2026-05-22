@@ -25,22 +25,31 @@ async function startServer() {
   // 1. Start generation
   app.post("/api/generate-video", async (req, res) => {
     try {
-      const { prompt } = req.body;
-      if (!prompt) {
-         res.status(400).json({ error: "Prompt is required" });
+      const { prompt, imageBytes, imageMimeType = 'image/png' } = req.body;
+      if (!prompt && !imageBytes) {
+         res.status(400).json({ error: "Prompt or image is required" });
          return;
       }
 
       console.log(`Starting video generation for prompt: "${prompt}"`);
-      const operation = await ai.models.generateVideos({
+      const options: any = {
         model: 'veo-3.1-lite-generate-preview',
-        prompt: prompt,
         config: {
           numberOfVideos: 1,
           resolution: '720p', 
           aspectRatio: '16:9'
         }
-      });
+      };
+      
+      if (prompt) options.prompt = prompt;
+      if (imageBytes) {
+        options.image = {
+          imageBytes: imageBytes,
+          mimeType: imageMimeType,
+        };
+      }
+      
+      const operation = await ai.models.generateVideos(options);
       res.json({ operationName: operation.name });
     } catch (error: any) {
       console.error("Generate video error:", error);
@@ -122,6 +131,78 @@ async function startServer() {
     }
   });
 
+  // 4. Generate Speech
+  app.post("/api/generate-speech", async (req, res) => {
+    try {
+      const { text, voice = 'Kore' } = req.body;
+      if (!text) {
+         res.status(400).json({ error: "Text is required" });
+         return;
+      }
+      const response = await ai.models.generateContent({
+        model: "gemini-3.1-flash-tts-preview",
+        contents: [{ parts: [{ text }] }],
+        config: {
+          responseModalities: ["AUDIO"],
+          speechConfig: {
+              voiceConfig: {
+                prebuiltVoiceConfig: { voiceName: voice },
+              },
+          },
+        },
+      });
+      const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+      if (base64Audio) {
+        res.json({ audio: base64Audio });
+      } else {
+        throw new Error("No audio generated");
+      }
+    } catch (error: any) {
+      console.error("Speech generation error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // 5. Generate Music
+  app.post("/api/generate-music", async (req, res) => {
+    try {
+      const { prompt } = req.body;
+      if (!prompt) {
+         res.status(400).json({ error: "Prompt is required" });
+         return;
+      }
+      
+      const response = await ai.models.generateContentStream({
+        model: "lyria-3-clip-preview",
+        contents: prompt,
+      });
+
+      let audioBase64 = "";
+      let mimeType = "audio/wav";
+
+      for await (const chunk of response) {
+        const parts = chunk.candidates?.[0]?.content?.parts;
+        if (!parts) continue;
+        for (const part of parts) {
+          if (part.inlineData?.data) {
+            if (!audioBase64 && part.inlineData.mimeType) {
+              mimeType = part.inlineData.mimeType;
+            }
+            audioBase64 += part.inlineData.data;
+          }
+        }
+      }
+
+      if (audioBase64) {
+        res.json({ audio: audioBase64, mimeType });
+      } else {
+        throw new Error("No music generated");
+      }
+    } catch (error: any) {
+      console.error("Music generation error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
